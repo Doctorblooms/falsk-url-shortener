@@ -4,37 +4,40 @@ import random
 
 app = Flask(__name__)
 
-# Dictionary to store shortened URLs
+# In-memory storage for shortened URLs
 url_mapping = {}
 
-def generate_short_code(length=6):
+# Function to generate a random short URL
+def generate_short_url(length=6):
     characters = string.ascii_letters + string.digits
     return ''.join(random.choice(characters) for _ in range(length))
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET'])
 def index():
-    if request.method == 'POST':
-        original_url = request.form['url']
-        short_code = generate_short_code()
+    # Pass url_mapping to the template
+    return render_template('index.html', url_mapping=url_mapping)
 
-        # Ensure the short code is unique
-        while short_code in url_mapping:
-            short_code = generate_short_code()
+@app.route('/shorten', methods=['POST'])
+def shorten():
+    original_url = request.form['url']
+    
+    # Generate a short URL
+    short_url = generate_short_url()
 
-        # Store mapping
-        url_mapping[short_code] = original_url
+    # Store the mapping
+    url_mapping[short_url] = original_url
+    
+    # Redirect to the index after shortening
+    return redirect(url_for('index'))
 
-        short_url = request.host_url + short_code
-        return render_template('index.html', short_url=short_url)
-
-    return render_template('index.html')
-
-@app.route('/<short_code>')
-def redirect_url(short_code):
-    original_url = url_mapping.get(short_code)
+@app.route('/<short_url>', methods=['GET'])
+def redirect_to_url(short_url):
+    original_url = url_mapping.get(short_url)
+    
     if original_url:
         return redirect(original_url)
-    return '<h1>URL not found</h1>', 404
+    else:
+        return "URL not found", 404
 
 if __name__ == '__main__':
     app.run(debug=True)
