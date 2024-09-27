@@ -1,34 +1,18 @@
 from flask import Flask, request, redirect, render_template, url_for
-import string
+import hashlib
 import os
 
 app = Flask(__name__)
 
 # In-memory storage for shortened URLs
 url_mapping = {}
-next_id = 0  # This will keep track of the next ID for encoding
 
-# Base62 characters
-BASE62 = string.ascii_letters + string.digits
-BASE = len(BASE62)
-
-def encode(num):
-    """Convert a number to a base62 string."""
-    if num == 0:
-        return BASE62[0]
-    
-    arr = []
-    while num > 0:
-        num, rem = divmod(num, BASE)
-        arr.append(BASE62[rem])
-    return ''.join(reversed(arr))
-
-def decode(short_url):
-    """Convert a base62 string back to a number."""
-    num = 0
-    for char in short_url:
-        num = num * BASE + BASE62.index(char)
-    return num
+# Function to generate a short URL using SHA-1 hashing
+def generate_short_url(original_url):
+    # Create a SHA-1 hash of the original URL
+    hash_object = hashlib.sha1(original_url.encode())
+    short_url = hash_object.hexdigest()[:5]  # Take the first 5 characters of the hash
+    return short_url
 
 @app.route('/', methods=['GET'])
 def index():
@@ -37,12 +21,10 @@ def index():
 
 @app.route('/shorten', methods=['POST'])
 def shorten():
-    global next_id  # Use global variable to track the next ID
     original_url = request.form['url']
     
-    # Generate a short URL using base62 encoding
-    short_url = encode(next_id)
-    next_id += 1  # Increment the ID for the next short URL
+    # Generate a short URL using the SHA-1 hash
+    short_url = generate_short_url(original_url)
 
     # Store the mapping
     url_mapping[short_url] = original_url
